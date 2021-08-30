@@ -909,11 +909,16 @@ function recreateGhosts()
 		end
 
 		-- Most important part: Recreate the ghosts that were destroyed by the rock spawning.
-		deadEntity.surface.create_entity({name = 'entity-ghost',
-										  position = {math.floor(deadEntity.position.x), math.floor(deadEntity.position.y)},
-										  inner_name = deadEntity.name,
-										  expires = true,
-										  force = 'player'})
+		local ghostRevived = {name = 'entity-ghost',
+							  position = {math.floor(deadEntity.position.x), math.floor(deadEntity.position.y)},
+							  inner_name = deadEntity.name,
+							  expires = true,
+							  force = 'player'}
+
+		if deadEntity.orientation ~= nil then ghostRevived.orientation = deadEntity.orientation end
+
+		deadEntity.surface.create_entity(ghostRevived)
+
 	end
 end
 
@@ -921,12 +926,16 @@ function entityDiedToMeteor(event)
 	-- Make a list of all entities destroyed by the most recent meteor shower
 	if event.entity.force.name == 'player' and event.damage_type.name == 'meteor' then
 		local name
+
 		-- Check if the destroyed entity was a ghost. The name is held in 'inner_name' if so.
 		if event.entity.name == 'entity-ghost' then name = event.entity.inner_name end
 		elseif event.entity.name ~= 'entity-ghost' then name = event.entity.name end
-		table.insert(destroyedEntities, {position = {x = event.entity.position.x, y = event.entity.position.y}, 
-										 name = name,
-										 surface = event.entity.surface})
+		local deadEntity = {position = {x = event.entity.position.x, y = event.entity.position.y}, 
+							name = name,
+							surface = event.entity.surface}
+
+		if event.entity.orientation ~= nil then deadEntity.orientation = event.entity.orientation end
+		table.insert(destroyedEntities, deadEntity)
 	end
 end
 Event.addListener(defines.events.on_entity_died, entityDiedToMeteor)
