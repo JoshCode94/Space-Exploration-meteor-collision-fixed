@@ -920,8 +920,12 @@ end
 function entityDiedToMeteor(event)
 	-- Make a list of all entities destroyed by the most recent meteor shower
 	if event.entity.force.name == 'player' and event.damage_type.name == 'meteor' then
+		local name
+		-- Check if the destroyed entity was a ghost. The name is held in 'inner_name' if so.
+		if event.entity.name == 'entity-ghost' then name = event.entity.inner_name end
+		elseif event.entity.name ~= 'entity-ghost' then name = event.entity.name end
 		table.insert(destroyedEntities, {position = {x = event.entity.position.x, y = event.entity.position.y}, 
-										 name = event.entity.name,
+										 name = name,
 										 surface = event.entity.surface})
 	end
 end
