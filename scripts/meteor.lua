@@ -1,4 +1,7 @@
 local Meteor = {}
+local meteorPositions = {}
+local destroyedEntities = {}
+local currTick
 
 Meteor.name_meteor_defence = mod_prefix.."meteor-defence"
 Meteor.name_meteor_defence_container = mod_prefix.."meteor-defence-container"
@@ -538,14 +541,20 @@ end
 
 function Meteor.spawn_meteor_shower(meteor_shower)
   local surface = Zone.get_make_surface(meteor_shower.zone)
+  currTick = game.tick -- Log the tick that the shower starts on
   for _, meteor in pairs(meteor_shower.remaining_meteors) do
+  	-- Create 'name' as a variable so that it can be passed into 'meteorPositions'
+  	local name = mod_prefix.."falling-meteor-"..string.format("%02d", math.random(Meteor.meteor_variants))
     surface.create_entity{
-      name = mod_prefix.."falling-meteor-"..string.format("%02d", math.random(Meteor.meteor_variants)),
+      name = name,
       position = meteor_shower.start_position,
       target = meteor.land_position,
       force = "neutral",
       speed = Util.vectors_delta_length(meteor_shower.start_position, meteor.land_position) / (Meteor.meteor_fall_time + Meteor.meteor_chain_delay * meteor.id)
     }
+    -- Make a list of all the meteors from the current shower. Need the landing pos and the name for each.
+    table.insert(meteorPositions, {pos = meteor.land_position, name = name})
+
     surface.create_entity{
       name = mod_prefix.."shadow-meteor-"..string.format("%02d", math.random(Meteor.meteor_variants)),
       position = meteor_shower.shadow_start_position,
@@ -866,5 +875,56 @@ function Meteor.on_mode_toggle(event)
   end
 end
 Event.addListener(mod_prefix .. 'mode-toggle', Meteor.on_mode_toggle)
+
+
+
+
+function waitForMeteorsToRender(event)
+	if currTick ~= nil then
+		-- I timed this, the meteors seem to take 2-3 seconds to spawn the rocks
+		if game.tick == currTick+180 then
+			recreateGhosts()
+		end
+	end
+end
+Event.addListener(defines.events.on_tick, waitForMeteorsToRender)
+
+function recreateGhosts()
+	-- local player = game.connected_players[1]
+	for _, deadEntity in pairs(destroyedEntities) do
+		for _, meteor in pairs(meteorPositions) do
+			-- For every entity destroyed by a meteor, mark the meteor for deconstruction.
+			-- Then recreate the ghosts that were destroyed by the rock spawning.
+			-- Can only place ghosts on top of the meteor if it is marked for deconstruction.
+
+			-- Since the falling meteor and static meteor share the same number, subsitute 'falling' for 'static'
+			meteor.name = string.gsub(meteor.name, 'falling', 'static')
+			local meteorEntity = deadEntity.surface.find_entity(meteor.name, meteor.pos)
+
+			-- Only deconstruct meteors that have not been marked already
+			if meteorEntity.to_be_deconstructed() == false then
+				meteorEntity.order_deconstruction('player')
+				-- player.print('Meteor at '..meteorEntity.position.x..', '..meteorEntity.position.y..' has been deconstructed? --- '.. tostring(meteorEntity.to_be_deconstructed()))
+			end
+		end
+
+		-- Most important part: Recreate the ghosts that were destroyed by the rock spawning.
+		deadEntity.surface.create_entity({name = 'entity-ghost',
+										  position = {math.floor(deadEntity.position.x), math.floor(deadEntity.position.y)},
+										  inner_name = deadEntity.name,
+										  expires = true,
+										  force = 'player'})
+	end
+end
+
+function entityDiedToMeteor(event)
+	-- Make a list of all entities destroyed by the most recent meteor shower
+	if event.entity.force.name == 'player' and event.damage_type.name == 'meteor' then
+		table.insert(destroyedEntities, {position = {x = event.entity.position.x, y = event.entity.position.y}, 
+										 name = event.entity.name,
+										 surface = event.entity.surface})
+	end
+end
+Event.addListener(defines.events.on_entity_died, entityDiedToMeteor)
 
 return Meteor

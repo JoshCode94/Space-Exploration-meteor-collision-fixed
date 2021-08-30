@@ -1,27 +1,31 @@
 local data_util = require("data_util")
+local sounds = require("__base__.prototypes.entity.sounds")
+
 --[[
 meteors
 projectile falls from the sky
 shadow moves sideways
 projectile causes explosion and spawns a rock
 ]]--
+
+-- Now includes precise calculations for the selection and collision boxes.
 local meteors = {
-  ["meteor-01"] = {209, 138},
-  ["meteor-02"] = {165,129},
-  ["meteor-03"] = {151,139},
-  ["meteor-04"] = {216,110},
-  ["meteor-05"] = {154,147},
-  ["meteor-06"] = {154,132},
-  ["meteor-07"] = {193,120},
-  ["meteor-08"] = {136,117},
-  ["meteor-09"] = {157,115},
-  ["meteor-10"] = {198,153},
-  ["meteor-11"] = {190,115},
-  ["meteor-12"] = {229,126},
-  ["meteor-13"] = {151,125},
-  ["meteor-14"] = {137,117},
-  ["meteor-15"] = {201,141},
-  ["meteor-16"] = {209,154},
+  ["meteor-01"] = {209,138,  {{-2,   -1},   {2,   1.3}}},
+  ["meteor-02"] = {165,129,  {{-1.7, -1},   {1.4, 1.3}}},
+  ["meteor-03"] = {151,139,  {{-1.3, -1},   {1.3, 1.6}}},
+  ["meteor-04"] = {216,110,  {{-2,   -1.1}, {1.6, 1.1}}},
+  ["meteor-05"] = {154,147,  {{-1.9, -1},   {2.2, 1.4}}},
+  ["meteor-06"] = {154,132,  {{-1.6, -1},   {1.7, 1.6}}},
+  ["meteor-07"] = {193,120,  {{-2.1, -0.6}, {2.1, 1.4}}},
+  ["meteor-08"] = {136,117,  {{-1.7, -0.6}, {1.3, 1.4}}},
+  ["meteor-09"] = {157,115,  {{-1.8, -0.8}, {2.2, 1.3}}},
+  ["meteor-10"] = {198,153,  {{-1.9, -1},   {2,   1.7}}},
+  ["meteor-11"] = {190,115,  {{-2,   -1},   {2.2, 1.4}}},
+  ["meteor-12"] = {229,126,  {{-2.4, -1},   {1.9, 1.4}}},
+  ["meteor-13"] = {151,125,  {{-1.8, -1}, 	{2.3, 1.4}}},
+  ["meteor-14"] = {137,117,  {{-1.6, -1}, 	{1.4, 1.3}}},
+  ["meteor-15"] = {201,141,  {{-2.2, -1}, 	{2.5, 1.7}}},
+  ["meteor-16"] = {209,154,  {{-2.3, -1.2}, {1.8, 1.8}}}
 }
 
 local tint = {r = 0.5, g = 0.5, b = 0.5}
@@ -33,6 +37,7 @@ for name, meteor in pairs(meteors) do
   local shadow_height = meteor[2]
   local scale = 0.75
   local picture_offset = width / 32 / 16
+  local meteorBox = meteor[3]
   data:extend({
     {
       type = "projectile",
@@ -211,11 +216,23 @@ for name, meteor in pairs(meteors) do
         { type = "fire", percent = 100 },
         { type = "poison", percent = 100 }
       },
-      collision_box = {{-1, -1}, {1, 1}},
-      collision_mask = {"not-colliding-with-itself"}, -- otherwise it kills the entity ghosts too
-      selection_box = {{-1, -1}, {1, 1}},
+      -- All the collision and selection boxes are now precisely calculated for each meteor variant.
+      collision_box = meteorBox,
+      -- Meteors are now solid and cannot be walked or driven straight through. Nor can entities be built underneath as if the meteor wasn't there.
+      -- This comes with the complication that any entity ghosts which would ordinarily be created in the destroyed entity's place are also destroyed.
+      -- I have added three function to 'meteor.lua' in the 'scripts' folder.
+      -- The meteors are marked for deconstruction and then the destroyed ghosts are replaced! This is a hack, but it works.
+      collision_mask = {
+      					"transport-belt-layer",
+      					"rail-layer",
+      					"train-layer",
+      					"player-layer",
+      					"object-layer"
+      					},
+      selection_box = meteorBox,
       selection_priority = 2,
       count_as_rock_for_filtered_deconstruction = true,
+      vehicle_impact_sound = sounds.car_stone_impact,
       picture =
       {
         layers = {
