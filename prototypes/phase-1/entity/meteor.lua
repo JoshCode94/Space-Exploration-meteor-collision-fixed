@@ -11,7 +11,7 @@ projectile causes explosion and spawns a rock
 -- Now includes precise calculations for the selection and collision boxes.
 local meteors = {
   ["meteor-01"] = {209,138,  {{-2,   -1},   {2,   1.3}}},
-  ["meteor-02"] = {165,129,  {{-1.7, -1},   {1.4, 1.3}}},
+  ["meteor-02"] = {165,129,  {{-1.7, -1},   {1.9, 1.3}}},
   ["meteor-03"] = {151,139,  {{-1.3, -1},   {1.3, 1.6}}},
   ["meteor-04"] = {216,110,  {{-2,   -1.1}, {1.6, 1.1}}},
   ["meteor-05"] = {154,147,  {{-1.9, -1},   {2.2, 1.4}}},
